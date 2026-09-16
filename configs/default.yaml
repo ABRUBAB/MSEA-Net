@@ -1,0 +1,62 @@
+# MSEA-Net Default Configuration
+# Multi-Scale Evidential Attention Network for Gastrointestinal Disease Classification
+
+# Dataset settings
+data:
+  data_root: "./data/kvasir-dataset-v2"
+  num_classes: 8
+  img_size: 224
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  class_names:
+    - dyed-lifted-polyps
+    - dyed-resection-margins
+    - esophagitis
+    - normal-cecum
+    - normal-pylorus
+    - normal-z-line
+    - polyps
+    - ulcerative-colitis
+
+# Augmentation settings
+augmentation:
+  rotation_degrees: 15
+  hflip: true
+  vflip: true
+  color_jitter: [0.2, 0.2, 0.2, 0.1]
+
+# Model architecture settings
+model:
+  name: "msea_net"
+  backbone: "tf_efficientnetv2_s"
+  pretrained: true
+  use_multiscale: true
+  use_attention: true
+  use_gff: true
+  use_edl: true
+
+# Training hyperparameters
+training:
+  epochs: 30
+  lr: 3.0e-4
+  lr_backbone: 3.0e-5
+  weight_decay: 1.0e-4
+  label_smoothing: 0.1
+  use_amp: true
+  patience: 10
+  seeds: [42, 123, 777]
+  baseline_seed: 42
+
+# Evidential Deep Learning settings
+edl:
+  lambda_max: 0.1
+  annealing: "linear" # "linear" or "cosine"
+
+# Output and logging
+output:
+  save_dir: "./msea_net_results"
+  save_figures: true

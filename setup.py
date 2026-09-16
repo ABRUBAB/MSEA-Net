@@ -1,0 +1,38 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="msea-net",
+    version="1.0.0",
+    description="MSEA-Net: Multi-Scale Evidential Attention Network with Uncertainty Calibration for Gastrointestinal Disease Classification",
+    author="Abdullah Rubab",
+    author_email="rubab2712@gmail.com",
+    url="https://github.com/ABRUBAB/MSEA-Net",
+    packages=find_packages(),
+    python_requires=">=3.8",
+    install_requires=[
+        "torch>=2.0.0",
+        "torchvision>=0.15.0",
+        "timm>=0.9.0",
+        "numpy>=1.23.0",
+        "pandas>=1.5.0",
+        "scipy>=1.10.0",
+        "scikit-learn>=1.2.0",
+        "matplotlib>=3.7.0",
+        "seaborn>=0.12.0",
+        "Pillow>=9.5.0",
+        "pyyaml>=6.0",
+        "tqdm>=4.65.0",
+    ],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Medical Science Apps.",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+    ],
+)

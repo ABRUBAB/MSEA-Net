@@ -1,0 +1,53 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# PyTorch / checkpoints / serialized results
+checkpoints/
+*.pth
+*.pt
+*.npz
+*.bin
+*.tar.gz
+
+# Datasets & large archives
+data/
+datasets/
+*.zip
+
+# Local paper drafts & raw thesis files (keep local, exclude from public repo)
+main*.pdf
+paper/
+results/
+phase*.py
+v1_archive/
+v2/
+architecture_diagram_specification.md
+workflow_diagram_specification.md
+
+# Experiment outputs
+msea_net_results/
+output/
+runs/
+wandb/
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
