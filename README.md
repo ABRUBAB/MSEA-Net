@@ -3,7 +3,6 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Paper: ScienceDirect](https://img.shields.io/badge/Journal-Elsevier-orange.svg)](https://www.sciencedirect.com/journal/intelligence-based-medicine)
 [![Author](https://img.shields.io/badge/Author-Abdullah%20Rubab-green.svg)](mailto:rubab2712@gmail.com)
 
 Official PyTorch implementation of **MSEA-Net**, an uncertainty-calibrated deep learning framework designed for dependable, real-time endoscopic disease detection and polyp diagnosis.
@@ -199,22 +198,6 @@ MSEA-Net/
 ├── setup.py                  # Package installation file
 ├── LICENSE                   # MIT License
 └── README.md                 # Main documentation
-```
-
----
-
-## 📖 Citation
-
-If you find MSEA-Net useful in your research or clinical applications, please cite our paper:
-
-```bibtex
-@article{rubab2026mseanet,
-  title={MSEA-Net: Multi-Scale Evidential Attention Network with Uncertainty Calibration for Gastrointestinal Disease Classification and Polyp Segmentation},
-  author={Rubab, Abdullah},
-  journal={Intelligence-Based Medicine},
-  publisher={Elsevier},
-  year={2026}
-}
 ```
 
 ---
