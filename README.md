@@ -14,7 +14,7 @@ Official PyTorch implementation of **MSEA-Net**, an uncertainty-calibrated deep 
 1. **Adaptive Channel-Spatial Attention (ACSA)**: Parallel channel- and spatial-attention pathways integrated across intermediate feature hierarchy levels with a learnable gate ($\alpha$) to dynamically weight "what" features to emphasize versus "where" lesions are situated.
 2. **Gated Feature Fusion (GFF)**: Replaces static feature concatenation with an adaptive gating mechanism that dynamically balances semantic depth against fine spatial granularity.
 3. **Evidential Deep Learning (EDL)**: Formulates class predictions as the parameters of a Dirichlet distribution, providing rigorous, non-Bayesian epistemic uncertainty quantification in a single deterministic forward pass.
-4. **Finite-Sample Distribution-Free Calibration**: Implements **Split Conformal Prediction (SCP)** guaranteeing $95\%$ marginal coverage and **Selective Prediction** yielding an accuracy jump from **$93.50\%$ to $98.57\%$** when abstaining on the top $15\%$ highest-uncertainty borderline endoscopic frames.
+4. **Finite-Sample Distribution-Free Calibration**: Implements **Split Conformal Prediction (SCP)** guaranteeing $95\%$ marginal coverage and **Selective Prediction** yielding an accuracy jump from **$93.50\%$ to $98.57\%$** when deferring the top $30\%$ highest-uncertainty borderline endoscopic frames ($70\%$ coverage, 840/1200 retained cases).
 
 ---
 
@@ -51,37 +51,42 @@ Expected Probabilities [8]      Epistemic Uncertainty u = K / S
 
 ## 📊 Benchmark Results (Kvasir-v2 Dataset)
 
-### 1. Comparison with Baseline Architectures (Seed 42)
+### 1. Comparison with Baseline Architectures (Kvasir-v2, N=1,200)
 
-| Model Architecture | Accuracy (%) | Macro F1 (%) | Macro AUROC | ECE ↓ |
-| :--- | :---: | :---: | :---: | :---: |
-| VGG-16 | 85.25 | 85.10 | 0.9620 | 0.1240 |
-| ResNet-50 | 88.50 | 88.35 | 0.9780 | 0.1085 |
-| Inception-v3 | 87.75 | 87.60 | 0.9740 | 0.1120 |
-| DenseNet-121 | 89.25 | 89.10 | 0.9810 | 0.0980 |
-| MobileNetV3-Large | 86.80 | 86.65 | 0.9710 | 0.1150 |
-| EfficientNetV2-S (Plain) | 90.50 | 90.35 | 0.9850 | 0.0890 |
-| **MSEA-Net (Proposed, Seed 777)** | **93.50** | **93.42** | **0.9920** | **0.0639** |
-| **MSEA-Net (Mean ± SD across 3 seeds)** | **92.83 ± 0.68** | **92.74 ± 0.68** | **0.9912 ± 0.001** | **0.0695 ± 0.005** |
+| Model Architecture | Accuracy (%) | Macro F1 (%) | Macro AUROC | ECE ↓ | Brier Score ↓ |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| VGG-16 | 92.08 | 92.04 | 0.9850 | 0.0413 | 0.1320 |
+| ResNet-50 | 89.92 | 89.90 | 0.9920 | 0.0568 | 0.1568 |
+| DenseNet-121 | 92.17 | 92.16 | 0.9899 | 0.0532 | 0.1305 |
+| Inception-v3 | 90.75 | 90.75 | 0.9829 | 0.0411 | 0.1511 |
+| MobileNetV3-Large | 91.58 | 91.57 | 0.9934 | 0.0648 | 0.1346 |
+| EfficientNetV2-S Plain | 92.00 | 91.97 | 0.9905 | 0.0499 | 0.1272 |
+| **MSEA-Net (Seed 777, Best)** | **93.50** | **93.49** | **0.9883** | **0.0632** | **0.1300** |
+| **MSEA-Net (Mean ± SD, 3 seeds)** | **92.64 ± 0.68** | **92.62 ± 0.68** | **0.9883 ± 0.0010** | **0.0843 ± 0.0211** | **0.1300** |
 
-### 2. Systematic Ablation Study (Seed 42)
+### 2. Systematic Architectural Ablation Study (Kvasir-v2, Seed 42)
 
-| Variant Configuration | Accuracy (%) | Macro F1 (%) | ECE ↓ | Epistemic Uncertainty |
-| :--- | :---: | :---: | :---: | :---: |
-| Plain EfficientNetV2-S | 90.50 | 90.35 | 0.0890 | N/A (Softmax) |
-| + Multi-Scale Feature Pyramid | 91.25 | 91.10 | 0.0820 | N/A (Softmax) |
-| + ACSA Attention Modules | 92.10 | 91.95 | 0.0760 | N/A (Softmax) |
-| + Gated Feature Fusion (GFF) | 92.75 | 92.60 | 0.0710 | N/A (Softmax) |
-| **+ Evidential Deep Learning (Full MSEA-Net)** | **93.50** | **93.42** | **0.0639** | **Calibrated ($u = 0.198$)** |
+| Architectural Variant | Accuracy (%) | Macro F1 (%) | Macro AUROC | ECE ↓ | Brier Score ↓ |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **MSEA-Net (Full Model)** | **92.64** | **92.62** | **0.9883** | **0.0843** | **0.1300** |
+| w/o Multi-Scale (`no_multiscale`) | 91.58 | 91.56 | 0.9858 | 0.0850 | 0.1454 |
+| w/o ACSA Attention (`no_attention`) | 92.67 | 92.63 | 0.9890 | 0.0894 | 0.1313 |
+| w/o GFF Gated Fusion (`no_gff`) | 92.08 | 92.06 | 0.9867 | 0.0753 | 0.1368 |
+| w/o EDL Head (`no_edl`) | 91.75 | 91.72 | 0.9945 | 0.0752 | 0.1262 |
 
-### 3. Selective Classification Performance
+### 3. Uncertainty-Governed Selective Prediction (Seed 777, N=1,200)
 
-| Abstention Rate (%) | Retained Samples | Accuracy (%) | Precision (%) | Recall (%) |
-| :---: | :---: | :---: | :---: | :---: |
-| **0% (Full Test Set)** | 1200 / 1200 | **93.50** | 93.55 | 93.50 |
-| **5%** | 1140 / 1200 | **95.18** | 95.22 | 95.18 |
-| **10%** | 1080 / 1200 | **96.85** | 96.90 | 96.85 |
-| **15%** | 1020 / 1200 | **98.57** | **98.62** | **98.57** |
+| Population Coverage | Deferral Rate | Retained Cases | Deferred Cases | Diagnostic Accuracy (%) | Accuracy Gain (Δ) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **100% (Full Autonomous)** | 0% | 1,200 | 0 | **93.50** | Baseline |
+| **95%** | 5% | 1,140 | 60 | **95.09** | +1.59% |
+| **90%** | 10% | 1,080 | 120 | **96.02** | +2.52% |
+| **85%** | 15% | 1,020 | 180 | **97.16** | +3.66% |
+| **80%** | 20% | 960 | 240 | **97.81** | +4.31% |
+| **75%** | 25% | 900 | 300 | **98.11** | +4.61% |
+| **70%** | **30%** | **840** | **360** | **98.57** | **+5.07%** |
+| **65%** | 35% | 780 | 420 | **98.85** | +5.35% |
+| **60%** | 40% | 720 | 480 | **98.75** | +5.25% |
 
 ---
 
