@@ -32,6 +32,7 @@ datasets/
 main*.pdf
 paper/
 results/
+submission_package/
 phase*.py
 v1_archive/
 v2/
