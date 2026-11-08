@@ -23,7 +23,7 @@ def main():
     try:
         import torch
         from msea_net.config import load_config, find_dataset_path
-        from msea_net.data.dataset import get_stratified_loaders
+        from msea_net.data.dataset import get_stratified_loaders, set_seed
         from msea_net.models.baselines import build_baseline_model
         from msea_net.training.trainer import Trainer
     except ImportError as e:
@@ -58,12 +58,15 @@ def main():
     print(f"   Batch Size:   {batch_size}")
     print(f"   Output Dir:   {output_dir}\n")
 
+    # Seed the training run (head initialisation, data order, augmentation)
+    set_seed(args.seed)
+
     # DataLoaders
     train_loader, val_loader, test_loader, class_names = get_stratified_loaders(
         data_root=data_root,
         batch_size=batch_size,
         img_size=img_size,
-        seed=args.seed,
+        split_seed=42,  # fixed partition of the published experiments (independent of the training seed)
         num_workers=config['data']['num_workers'],
         pin_memory=config['data']['pin_memory'],
     )

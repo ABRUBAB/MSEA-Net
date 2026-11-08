@@ -23,9 +23,9 @@ checkpoints/
 *.bin
 *.tar.gz
 
-# Datasets & large archives
-data/
-datasets/
+# Datasets & large archives (root-level only: msea_net/data/ is source code)
+/data/
+/datasets/
 *.zip
 
 # Local paper drafts & raw thesis files (keep local, exclude from public repo)
@@ -33,7 +33,6 @@ main*.pdf
 paper/
 results/
 submission_package/
-phase*.py
 v1_archive/
 v2/
 architecture_diagram_specification.md
@@ -52,3 +51,38 @@ wandb/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Secrets: never commit API keys or tokens
+kaggle_api_keys.txt
+llm_api_keys.txt
+huggingface_tokens.txt
+*_api_keys.txt
+*_tokens.txt
+kaggle.json
+
+# Local manuscript / submission material (kept out of the public code repository)
+IBMED/
+sub_agent/
+tools/
+arci and workflow img/
+Copy of Input WBC Image*/
+main.tex
+mesanet.pdf
+review-*.pdf
+cas-common.sty
+AGENT_HANDOFF_GUIDE.md
+
+# Revision experiment outputs (regenerable; contact sheets contain third-party images)
+revision/outputs/
+
+# Revision: manuscript-internal tooling (manuscript text, response letter, submission notes) kept local
+revision/manuscript_edits/
+revision/docx/
+revision/make_response_letter.py
+revision/update_submission_guide.py
+revision/update_handoff_guide.py
+revision/update_highlights.py
+revision/finalize_figures.py
+revision/patch_figure1.py
+revision/check_references.py
+revision/REVISION_STATUS.md

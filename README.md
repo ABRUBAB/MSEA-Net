@@ -1,218 +1,114 @@
-# MSEA-Net: Multi-Scale Evidential Attention Network with Uncertainty Calibration for Gastrointestinal Disease Classification and Polyp Segmentation
+# MSEA-Net: Multi-Scale Evidential Attention Network for Uncertainty-Aware Gastrointestinal Endoscopy Classification
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Author](https://img.shields.io/badge/Author-Abdullah%20Rubab-green.svg)](mailto:rubab2712@gmail.com)
 
-Official PyTorch implementation of **MSEA-Net**, an uncertainty-calibrated deep learning framework designed for dependable, real-time endoscopic disease detection and polyp diagnosis.
+Official PyTorch implementation of **MSEA-Net**, an eight-class gastrointestinal endoscopy image classifier that
+returns, in a single forward pass, both class probabilities and an evidence-derived reliability score (Dirichlet
+vacuity) used to accept or defer each prediction.
 
----
+## Key components
 
-## 📌 Key Highlights & Novel Contributions
+1. **Adaptive Channel-Spatial Attention (ACSA)** on three EfficientNetV2-S stages, with a learnable gate
+   $g_i=\sigma(\gamma_i)$ balancing parallel channel and spatial attention.
+2. **Gated Feature Fusion (GFF)**: image-dependent softmax weights over the three projected scale descriptors.
+3. **Evidential head**: non-negative evidence parameterising a Dirichlet distribution; vacuity $u=K/S$ is an
+   evidence-derived reliability score (not a complete Bayesian epistemic estimate).
+4. **Selective prediction**: images with $u>\tau$ are deferred; $\tau$ is fixed on validation data.
 
-1. **Adaptive Channel-Spatial Attention (ACSA)**: Parallel channel- and spatial-attention pathways integrated across intermediate feature hierarchy levels with a learnable gate ($\alpha$) to dynamically weight "what" features to emphasize versus "where" lesions are situated.
-2. **Gated Feature Fusion (GFF)**: Replaces static feature concatenation with an adaptive gating mechanism that dynamically balances semantic depth against fine spatial granularity.
-3. **Evidential Deep Learning (EDL)**: Formulates class predictions as the parameters of a Dirichlet distribution, providing rigorous, non-Bayesian epistemic uncertainty quantification in a single deterministic forward pass.
-4. **Finite-Sample Distribution-Free Calibration**: Implements **Split Conformal Prediction (SCP)** guaranteeing $95\%$ marginal coverage and **Selective Prediction** yielding an accuracy jump from **$93.50\%$ to $98.57\%$** when deferring the top $30\%$ highest-uncertainty borderline endoscopic frames ($70\%$ coverage, 840/1200 retained cases).
+## Results on Kvasir-v2 (test subset, N = 1,200; three training runs per model, mean ± sample SD)
 
----
+| Model | Accuracy (%) | Macro-F1 (%) | Macro-AUC (%) | ECE | Brier | Error-detection AUROC (%) | AURC (×100, lower better) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| VGG-16 | 91.86 ± 0.46 | 91.83 ± 0.46 | 98.84 ± 0.33 | 0.0456 ± 0.0046 | 0.1358 ± 0.0040 | 78.11 ± 3.72 | 3.51 ± 0.13 |
+| ResNet-50 | 89.42 ± 0.60 | 89.41 ± 0.59 | 99.19 ± 0.05 | 0.0598 ± 0.0061 | 0.1601 ± 0.0031 | 84.71 ± 2.49 | 2.73 ± 0.42 |
+| DenseNet-121 | 92.11 ± 0.17 | 92.09 ± 0.17 | 99.07 ± 0.10 | 0.0527 ± 0.0005 | 0.1275 ± 0.0029 | 80.86 ± 1.71 | 3.05 ± 0.32 |
+| Inception-v3 | 90.97 ± 0.54 | 90.95 ± 0.53 | 98.66 ± 0.33 | 0.0473 ± 0.0098 | 0.1458 ± 0.0057 | 78.85 ± 2.79 | 3.95 ± 0.39 |
+| MobileNetV3-Large | 91.42 ± 0.52 | 91.38 ± 0.56 | 99.28 ± 0.06 | 0.0608 ± 0.0036 | 0.1356 ± 0.0052 | 85.01 ± 0.37 | 2.18 ± 0.30 |
+| EfficientNetV2-S | 92.33 ± 0.30 | 92.32 ± 0.31 | 99.03 ± 0.03 | 0.0558 ± 0.0060 | 0.1249 ± 0.0029 | 81.54 ± 0.37 | 2.58 ± 0.20 |
+| **MSEA-Net** | **92.64 ± 0.83** | **92.62 ± 0.84** | **98.83 ± 0.12** | **0.0843 ± 0.0258** | **0.1320 ± 0.0125** | **87.38 ± 1.69** | **1.42 ± 0.07** |
 
-## 🏗️ Architecture Overview
+Error detection and AURC use vacuity for MSEA-Net and 1 − max softmax for the baselines. MSEA-Net has the highest
+mean accuracy and macro-F1 (significant against ResNet-50, Inception-v3 and MobileNetV3 in seed-matched McNemar
+tests, not against EfficientNetV2-S, DenseNet-121 or VGG-16) and the best error ranking; it does not lead macro-AUC
+or calibration (its probabilities are under-confident).
 
-```
-Input Image [3, 224, 224]
-        │
-┌───────▼─────────────────────────────────────────────────┐
-│ EfficientNetV2-S Hierarchical Backbone (Pretrained)     │
-└───┬─────────────────────┬─────────────────────┬─────────┘
-    │ Stage 4 [64, 28, 28] │ Stage 5 [160, 14, 14]│ Stage 6 [256, 7, 7]
-    ▼                     ▼                     ▼
-┌─────────┐           ┌─────────┐           ┌─────────┐
-│ ACSA-1  │           │ ACSA-2  │           │ ACSA-3  │
-└────┬────┘           └────┬────┘           └────┬────┘
-     │ GAP                 │ GAP                 │ GAP
-     ▼ [64]                ▼ [160]               ▼ [256]
-┌────┴─────────────────────┴─────────────────────┴────────┐
-│ Gated Feature Fusion (GFF) with Softmax Attention Gates │
-└─────────────────────────┬───────────────────────────────┘
-                          │ Fused Feature [256]
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│ Evidential Head (Softplus -> Dirichlet Parameters α)    │
-└─────────────────────────┬───────────────────────────────┘
-                          │
-         ┌────────────────┴────────────────┐
-         ▼                                 ▼
-Expected Probabilities [8]      Epistemic Uncertainty u = K / S
-```
+### Ablation (three matched runs)
 
----
+| Variant | Accuracy (%) | Macro-F1 (%) | Macro-AUC (%) | ECE | Brier | Error-detection AUROC (%) | AURC (×100) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MSEA-Net** | **92.64 ± 0.83** | **92.62 ± 0.84** | **98.83 ± 0.12** | **0.0843 ± 0.0258** | **0.1320 ± 0.0125** | **87.38 ± 1.69** | **1.42 ± 0.07** |
+| w/o multi-scale | 91.97 ± 0.38 | 91.95 ± 0.39 | 98.74 ± 0.16 | 0.0930 ± 0.0184 | 0.1401 ± 0.0064 | 87.64 ± 1.23 | 1.59 ± 0.24 |
+| w/o ACSA | 92.50 ± 0.17 | 92.48 ± 0.15 | 98.85 ± 0.05 | 0.1005 ± 0.0254 | 0.1350 ± 0.0073 | 87.17 ± 1.00 | 1.57 ± 0.21 |
+| w/o GFF | 91.97 ± 0.67 | 91.95 ± 0.68 | 98.63 ± 0.07 | 0.0876 ± 0.0123 | 0.1420 ± 0.0079 | 86.15 ± 1.84 | 1.75 ± 0.10 |
+| w/o EDL | 91.97 ± 0.21 | 91.95 ± 0.22 | 99.40 ± 0.04 | 0.0637 ± 0.0101 | 0.1231 ± 0.0028 | 86.63 ± 0.32 | 2.00 ± 0.06 |
 
-## 📊 Benchmark Results (Kvasir-v2 Dataset)
+### Selective prediction
 
-### 1. Comparison with Baseline Architectures (Kvasir-v2, N=1,200)
+Vacuity thresholds fixed on the validation subset (70 % target) kept 69.3 % of test images with 98.60 % accuracy
+(mean of three runs); at every coverage from 100 % to 50 % the MSEA-Net risk–coverage curve is the highest of the
+seven architectures.
 
-| Model Architecture | Accuracy (%) | Macro F1 (%) | Macro AUROC | ECE ↓ | Brier Score ↓ |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| VGG-16 | 92.08 | 92.04 | 0.9850 | 0.0413 | 0.1320 |
-| ResNet-50 | 89.92 | 89.90 | 0.9920 | 0.0568 | 0.1568 |
-| DenseNet-121 | 92.17 | 92.16 | 0.9899 | 0.0532 | 0.1305 |
-| Inception-v3 | 90.75 | 90.75 | 0.9829 | 0.0411 | 0.1511 |
-| MobileNetV3-Large | 91.58 | 91.57 | 0.9934 | 0.0648 | 0.1346 |
-| EfficientNetV2-S Plain | 92.00 | 91.97 | 0.9905 | 0.0499 | 0.1272 |
-| **MSEA-Net (Seed 777, Best)** | **93.50** | **93.49** | **0.9883** | **0.0632** | **0.1300** |
-| **MSEA-Net (Mean ± SD, 3 seeds)** | **92.64 ± 0.68** | **92.62 ± 0.68** | **0.9883 ± 0.0010** | **0.0843 ± 0.0211** | **0.1300** |
+## External validation (frozen Kvasir-v2 models unless stated)
 
-### 2. Systematic Architectural Ablation Study (Kvasir-v2, Seed 42)
+| Model | GastroVision acc. (%) | GastroVision bal. acc. (%) | GastroEndoNet acc., frozen (%) | GastroEndoNet shift-detection AUROC (%) | GastroEndoNet, trained from ImageNet (%) | GastroEndoNet, fine-tuned from Kvasir-v2 (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| VGG-16 | 86.57 ± 0.69 | 84.02 ± 0.39 | 43.77 ± 0.21 | 75.31 ± 4.13 | 81.74 ± 0.87 | 81.97 ± 1.01 |
+| ResNet-50 | 82.55 ± 0.59 | 80.60 ± 1.51 | 48.25 ± 0.19 | 84.91 ± 1.02 | 73.20 ± 1.54 | 75.38 ± 1.17 |
+| DenseNet-121 | 87.62 ± 0.23 | 86.25 ± 0.71 | 51.21 ± 0.96 | 86.77 ± 1.47 | 81.80 ± 0.92 | 81.97 ± 0.76 |
+| Inception-v3 | 86.09 ± 0.99 | 85.41 ± 0.22 | 44.82 ± 0.92 | 80.32 ± 0.96 | 80.46 ± 0.48 | 81.52 ± 0.42 |
+| MobileNetV3-Large | 86.82 ± 0.29 | 85.88 ± 0.09 | 47.05 ± 0.33 | 81.41 ± 3.27 | 80.23 ± 1.01 | 82.69 ± 0.35 |
+| EfficientNetV2-S | 87.81 ± 0.26 | 86.97 ± 0.24 | 47.62 ± 0.81 | 80.36 ± 1.22 | 84.98 ± 0.42 | 84.81 ± 0.54 |
+| **MSEA-Net** | 86.51 ± 1.12 | 86.68 ± 0.79 | 44.53 ± 1.68 | 87.46 ± 1.35 | 84.20 ± 0.35 | 84.81 ± 0.39 |
 
-| Architectural Variant | Accuracy (%) | Macro F1 (%) | Macro AUROC | ECE ↓ | Brier Score ↓ |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **MSEA-Net (Full Model)** | **92.64** | **92.62** | **0.9883** | **0.0843** | **0.1300** |
-| w/o Multi-Scale (`no_multiscale`) | 91.58 | 91.56 | 0.9858 | 0.0850 | 0.1454 |
-| w/o ACSA Attention (`no_attention`) | 92.67 | 92.63 | 0.9890 | 0.0894 | 0.1313 |
-| w/o GFF Gated Fusion (`no_gff`) | 92.08 | 92.06 | 0.9867 | 0.0753 | 0.1368 |
-| w/o EDL Head (`no_edl`) | 91.75 | 91.72 | 0.9945 | 0.0752 | 0.1262 |
+GastroVision: the seven categories shared with Kvasir-v2. GastroEndoNet: four classes with different label
+definitions (GERD, GERD Normal, Polyp, Polyp Normal), mapped to esophagitis, normal Z-line, polyps and normal cecum;
+frozen accuracy is low for every architecture, while MSEA-Net's vacuity flags the shifted images best (AUROC for
+separating GastroEndoNet from Kvasir-v2 test images). After fine-tuning from the Kvasir-v2 weights, MSEA-Net and
+EfficientNetV2-S share the highest accuracy, and MSEA-Net is significantly more accurate than the other five baselines.
+Both datasets were screened for exact and near-duplicate images against Kvasir-v2 before evaluation.
 
-### 3. Uncertainty-Governed Selective Prediction (Seed 777, N=1,200)
+## Reproducibility
 
-| Population Coverage | Deferral Rate | Retained Cases | Deferred Cases | Diagnostic Accuracy (%) | Accuracy Gain (Δ) |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **100% (Full Autonomous)** | 0% | 1,200 | 0 | **93.50** | Baseline |
-| **95%** | 5% | 1,140 | 60 | **95.09** | +1.59% |
-| **90%** | 10% | 1,080 | 120 | **96.02** | +2.52% |
-| **85%** | 15% | 1,020 | 180 | **97.16** | +3.66% |
-| **80%** | 20% | 960 | 240 | **97.81** | +4.31% |
-| **75%** | 25% | 900 | 300 | **98.11** | +4.61% |
-| **70%** | **30%** | **840** | **360** | **98.57** | **+5.07%** |
-| **65%** | 35% | 780 | 420 | **98.85** | +5.35% |
-| **60%** | 40% | 720 | 480 | **98.75** | +5.25% |
+* **Code of record.** Every reported Kvasir-v2 number was produced by the public Kaggle notebook
+  [absanim/msea-net](https://www.kaggle.com/code/absanim/msea-net), whose five cells are identical to
+  `phase1_setup_and_data.py` … `phase5_evaluation_xai.py` in this repository (data: Kaggle
+  `plhalvorsen/kvasir-v2-a-gastrointestinal-tract-dataset`; Tesla T4, PyTorch 2.10).
+* **Package.** `msea_net/` reproduces the notebook exactly (same ordered file list, seed-42 split, preprocessing and
+  model outputs; verified with `revision/verify_package_split.py`). The partition is always the seed-42 split;
+  `--seed` only seeds training.
+* **Revision experiments** (`revision/`): `reproduce_kvasir.py` (re-runs the 13 checkpoints; 9 bit-identical,
+  4 differ in 1/1,200 predictions on an RTX 5090), `train_runs.py` (extra seeds, GastroEndoNet training and
+  fine-tuning), `gastroendonet_screen.py`, `gastrovision_prepare.py`, `external_eval*.py`, `analysis_*.py`,
+  `benchmark_latency.py`, and the figure scripts.
+* **Preprocessing.** Training: resize 256×256 → random crop 224 → horizontal/vertical flips → rotation ±15° →
+  colour jitter (0.2, 0.2, 0.2, 0.1) → ImageNet normalisation. Validation/test/external: resize 224×224 →
+  ImageNet normalisation (no crop).
 
----
-
-## 🚀 Quickstart Guide
-
-### 1. Installation
-
-Clone this repository and install requirements in a clean virtual environment:
+## Quickstart
 
 ```bash
 git clone https://github.com/ABRUBAB/MSEA-Net.git
 cd MSEA-Net
-
-# Create environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies and local package
 pip install -r requirements.txt
 pip install -e .
-```
-
-### 2. Dataset Setup (Kvasir-v2)
-
-Download the **Kvasir-v2** dataset (8,000 endoscopic images across 8 classes) and arrange it as follows:
-
-```
-data/kvasir-dataset-v2/
-├── dyed-lifted-polyps/
-├── dyed-resection-margins/
-├── esophagitis/
-├── normal-cecum/
-├── normal-pylorus/
-├── normal-z-line/
-├── polyps/
-└── ulcerative-colitis/
-```
-
-### 3. Model Training
-
-Train the proposed MSEA-Net with default hyperparameters:
-
-```bash
-python train.py --model msea_net --data_dir ./data/kvasir-dataset-v2 --seed 777 --epochs 30 --batch_size 32
-```
-
-Train comparative baselines or ablation variants:
-```bash
-# Train ResNet-50 baseline
-python train.py --model resnet50 --seed 42
-
-# Train Ablation without Evidential Head (Standard Cross-Entropy)
-python train.py --model msea_no_edl --seed 42
-```
-
-### 4. Checkpoint Evaluation & Conformal Calibration
-
-Evaluate any saved checkpoint on the held-out test set to generate classification metrics, ECE, and 95% Split Conformal Prediction sets:
-
-```bash
+python train.py --model msea_net --data_dir ./data/kvasir-dataset-v2 --seed 777
 python evaluate.py --checkpoint msea_net_results/msea_net_seed777_best.pth --data_dir ./data/kvasir-dataset-v2
+python infer.py --image ./sample_endoscopy.jpg --checkpoint msea_net_results/msea_net_seed777_best.pth --explain gradcam++ --output ./overlay.png
 ```
 
-### 5. Single-Image Clinical Inference & Saliency Overlay
+Expected dataset layout: `data/kvasir-dataset-v2/<class>/*.jpg` for the eight classes (dyed-lifted-polyps,
+dyed-resection-margins, esophagitis, normal-cecum, normal-pylorus, normal-z-line, polyps, ulcerative-colitis).
 
-Run inference on an endoscopic image to output predicted pathology, Dirichlet uncertainty, clinical decision recommendation, and Grad-CAM++ visualization:
+## Data licences
 
-```bash
-python infer.py --image ./sample_endoscopy.jpg --checkpoint msea_net_results/msea_net_seed777_best.pth --explain gradcam++ --output ./diagnosis_overlay.png
-```
+Kvasir-v2 (Simula), GastroVision (Jha et al., 2023) and GastroEndoNet (Bitto et al., Data in Brief 2025; Mendeley
+Data V3, CC BY-NC-ND 4.0) are not redistributed here; download them from their original sources.
 
-### 6. Full Benchmark Replication
+## Contact
 
-To reproduce all results (3 seeds for MSEA-Net + 6 baselines + 4 ablations):
+Abdullah Rubab, Department of Computer Science and Engineering, Daffodil International University —
+[rubab2712@gmail.com](mailto:rubab2712@gmail.com) · GitHub [@ABRUBAB](https://github.com/ABRUBAB)
 
-```bash
-python run_experiments.py --data_dir ./data/kvasir-dataset-v2 --epochs 30
-```
-
----
-
-## 📂 Repository Structure
-
-```
-MSEA-Net/
-├── configs/
-│   └── default.yaml          # Central hyperparameter configuration
-├── msea_net/                 # Core Python package
-│   ├── config.py             # Config loader & environment detection
-│   ├── data/
-│   │   └── dataset.py        # KvasirDataset & stratified split loaders
-│   ├── models/
-│   │   ├── attention.py      # ACSA (Adaptive Channel-Spatial Attention)
-│   │   ├── fusion.py         # GFF (Gated Feature Fusion)
-│   │   ├── heads.py          # EvidentialHead & StandardHead
-│   │   ├── msea_net.py       # Full proposed MSEA-Net architecture
-│   │   └── baselines.py      # Baseline architectures factory
-│   ├── losses/
-│   │   └── edl.py            # Evidential Dirichlet loss + annealed KL
-│   ├── training/
-│   │   └── trainer.py        # Trainer engine, AMP, differential LR, scheduler
-│   ├── evaluation/
-│   │   ├── metrics.py        # Acc, Macro-F1, AUROC, Brier score
-│   │   └── calibration.py    # ECE, Split Conformal Prediction, Selective Risk
-│   └── xai/
-│       └── explainers.py     # Grad-CAM, Grad-CAM++, LIME, SHAP, UMAP
-├── notebooks/
-│   └── demo.ipynb            # Interactive inference & uncertainty demo
-├── train.py                  # CLI training script
-├── evaluate.py               # CLI evaluation script
-├── infer.py                  # CLI single image inference script
-├── run_experiments.py        # Benchmark automation script
-├── requirements.txt          # Python dependencies
-├── setup.py                  # Package installation file
-├── LICENSE                   # MIT License
-└── README.md                 # Main documentation
-```
-
----
-
-## 📬 Contact & Inquiries
-
-**Abdullah Rubab**  
-Department of Computer Science and Engineering, Daffodil International University  
-Email: [rubab2712@gmail.com](mailto:rubab2712@gmail.com)  
-GitHub: [@ABRUBAB](https://github.com/ABRUBAB)
-
----
-*Distributed under the MIT License. See `LICENSE` for more information.*
+*Distributed under the MIT License (see `LICENSE`).*

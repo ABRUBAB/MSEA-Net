@@ -42,7 +42,7 @@ def main():
         data_root=data_root,
         batch_size=args.batch_size,
         img_size=config['data']['img_size'],
-        seed=args.seed,
+        split_seed=42,  # all checkpoints share the seed-42 partition; --seed only names the run
     )
 
     # Instantiate model and load weights

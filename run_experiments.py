@@ -23,7 +23,7 @@ def main():
         import numpy as np
         import torch
         from msea_net.config import load_config, find_dataset_path
-        from msea_net.data.dataset import get_stratified_loaders
+        from msea_net.data.dataset import get_stratified_loaders, set_seed
         from msea_net.models.baselines import build_baseline_model
         from msea_net.training.trainer import Trainer
     except ImportError as e:
@@ -51,11 +51,12 @@ def main():
     msea_metrics = []
 
     for seed in msea_seeds:
+        set_seed(seed)
         train_loader, val_loader, test_loader, _ = get_stratified_loaders(
             data_root=data_root,
             batch_size=args.batch_size,
             img_size=config['data']['img_size'],
-            seed=seed,
+            split_seed=42,
             num_workers=config['data']['num_workers'],
             pin_memory=config['data']['pin_memory'],
         )
@@ -92,7 +93,7 @@ def main():
         data_root=data_root,
         batch_size=args.batch_size,
         img_size=config['data']['img_size'],
-        seed=42,
+        split_seed=42,
         num_workers=config['data']['num_workers'],
         pin_memory=config['data']['pin_memory'],
     )
